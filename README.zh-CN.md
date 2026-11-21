@@ -10,6 +10,7 @@
 [![Platform: Linux](https://img.shields.io/badge/platform-Linux-lightgrey.svg)](#依赖)
 [![Language: Rust](https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
 [![UI: GTK3](https://img.shields.io/badge/UI-GTK3-4a90d9.svg)](#架构)
+[![Release](https://img.shields.io/github/v/release/new-agent-lk/buds-panel?color=blue)](https://github.com/new-agent-lk/buds-panel/releases)
 
 Buds Panel 是一个用 Rust + GTK3 写的 Linux 桌面小工具，直接通过蓝牙耳机的控制通道读写状态。
 它能读取左右耳与充电盒电量、切换降噪模式、选择蓝牙音频编码，全部集中在一个挂在顶栏下的弹窗里，
@@ -20,6 +21,12 @@ Buds Panel 是一个用 Rust + GTK3 写的 Linux 桌面小工具，直接通过�
 > [English](README.md) | 简体中文
 
 ---
+
+## 演示
+
+<p align="left"><img src="docs/assets/demo.gif" width="300" alt="Buds Panel 弹窗演示"></p>
+
+点击顶栏托盘图标打开弹窗：左右耳与充电盒电量、实时编码指示、音量、一键降噪模式。
 
 ## 支持的设备
 
@@ -64,7 +71,7 @@ sudo apt install libfdk-aac2        # 部分发行版为 libfdk-aac-dev
 ## 安装
 
 ```sh
-git clone https://github.com/REPO_URL/buds-panel.git
+git clone https://github.com/new-agent-lk/buds-panel.git
 cd buds-panel
 ./install.sh
 ```

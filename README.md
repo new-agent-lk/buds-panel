@@ -10,6 +10,7 @@
 [![Platform: Linux](https://img.shields.io/badge/platform-Linux-lightgrey.svg)](#requirements)
 [![Language: Rust](https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
 [![UI: GTK3](https://img.shields.io/badge/UI-GTK3-4a90d9.svg)](#architecture)
+[![Release](https://img.shields.io/github/v/release/new-agent-lk/buds-panel?color=blue)](https://github.com/new-agent-lk/buds-panel/releases)
 
 Buds Panel is a small Rust + GTK3 desktop app for Linux that talks directly to Bluetooth
 earbuds over their control channel. It reads per-earbud and charging-case battery, switches
@@ -21,6 +22,13 @@ off your top bar, backed by a resident D-Bus service you can also script.
 > English | [简体中文](README.zh-CN.md)
 
 ---
+
+## Demo
+
+<p align="left"><img src="docs/assets/demo.gif" width="300" alt="Buds Panel popover demo"></p>
+
+Click the top-bar tray icon to open the popover: per-earbud and case battery, live codec
+indicator, volume, and one-tap noise-cancelling modes.
 
 ## Supported devices
 
@@ -72,7 +80,7 @@ sudo apt install libfdk-aac2        # or libfdk-aac-dev on some releases
 ## Install
 
 ```sh
-git clone https://github.com/REPO_URL/buds-panel.git
+git clone https://github.com/new-agent-lk/buds-panel.git
 cd buds-panel
 ./install.sh
 ```

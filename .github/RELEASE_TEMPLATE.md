@@ -14,7 +14,7 @@ GitHub Release 正文模板。复制到 Release 编辑框，替换占位内容�
 Build from source:
 
 ```sh
-git clone https://github.com/REPO_URL/buds-panel.git
+git clone https://github.com/new-agent-lk/buds-panel.git
 cd buds-panel
 ./install.sh
 ```

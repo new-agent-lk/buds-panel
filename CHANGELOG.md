@@ -30,5 +30,5 @@ First public source release.
 - aptX Adaptive is a Qualcomm patented technology and ships out of tree; see
   `docs/aptx-adaptive.md` and `NOTICE`.
 
-[Unreleased]: https://github.com/REPO_URL/buds-panel/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/REPO_URL/buds-panel/releases/tag/v0.1.0
+[Unreleased]: https://github.com/new-agent-lk/buds-panel/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/new-agent-lk/buds-panel/releases/tag/v0.1.0
