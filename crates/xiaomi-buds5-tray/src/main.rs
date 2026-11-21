@@ -1,8 +1,8 @@
 // GTK3 status tray + popover for the Xiaomi Buds 5 panel.
 // Rust port of the former Python tray.py / sni.py; same D-Bus contract.
+use glib::ToVariant;
 use gtk::prelude::*;
 use gtk::{cairo, gdk, gio, glib};
-use glib::ToVariant;
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, VecDeque};
 use std::os::unix::net::UnixListener;
@@ -123,10 +123,16 @@ fn home() -> String {
     std::env::var("HOME").unwrap_or_default()
 }
 fn adaptive_runtime() -> String {
-    format!("{}/.local/share/xiaomi-buds5-panel/adaptive-runtime", home())
+    format!(
+        "{}/.local/share/xiaomi-buds5-panel/adaptive-runtime",
+        home()
+    )
 }
 fn adaptive_state() -> String {
-    format!("{}/.local/share/xiaomi-buds5-panel/state/adaptive.pid", home())
+    format!(
+        "{}/.local/share/xiaomi-buds5-panel/state/adaptive.pid",
+        home()
+    )
 }
 fn has_adaptive() -> bool {
     Path::new(&adaptive_state()).exists()
@@ -136,7 +142,10 @@ fn pactl(args: &[&str]) -> String {
     let mut c = Command::new("pactl");
     c.args(args);
     if has_adaptive() {
-        c.env("PULSE_SERVER", format!("unix:{}/pulse/native", adaptive_runtime()));
+        c.env(
+            "PULSE_SERVER",
+            format!("unix:{}/pulse/native", adaptive_runtime()),
+        );
     }
     match c.output() {
         Ok(o) => String::from_utf8_lossy(&o.stdout).into_owned(),
@@ -153,7 +162,10 @@ fn buds_address() -> Option<String> {
             return Some(a.to_string());
         }
     }
-    let out = Command::new("bluetoothctl").args(["paired-devices"]).output().ok()?;
+    let out = Command::new("bluetoothctl")
+        .args(["paired-devices"])
+        .output()
+        .ok()?;
     let text = String::from_utf8_lossy(&out.stdout);
     let mut best: Option<(u8, String)> = None;
     for line in text.lines() {
@@ -175,7 +187,9 @@ fn buds_address() -> Option<String> {
 }
 
 fn buds_connected() -> bool {
-    let Some(mac) = buds_address() else { return false };
+    let Some(mac) = buds_address() else {
+        return false;
+    };
     Command::new("bluetoothctl")
         .args(["info", &mac])
         .output()
@@ -217,7 +231,10 @@ fn set_sink_volume(sink: &str, pct: i32) {
     let mut c = Command::new("pactl");
     c.args(["set-sink-volume", sink, &vol]);
     if has_adaptive() {
-        c.env("PULSE_SERVER", format!("unix:{}/pulse/native", adaptive_runtime()));
+        c.env(
+            "PULSE_SERVER",
+            format!("unix:{}/pulse/native", adaptive_runtime()),
+        );
     }
     let _ = c.status();
 }
@@ -243,9 +260,16 @@ fn codec_label(name: &str) -> String {
 fn parse_state(dict: &HashMap<String, glib::Variant>) -> State {
     let gb = |k: &str| -> bool { dict.get(k).and_then(|v| v.get::<bool>()).unwrap_or(false) };
     let gu = |k: &str| -> u32 { dict.get(k).and_then(|v| v.get::<u32>()).unwrap_or(0) };
-    let gs = |k: &str| -> String { dict.get(k).and_then(|v| v.get::<String>()).unwrap_or_default() };
+    let gs = |k: &str| -> String {
+        dict.get(k)
+            .and_then(|v| v.get::<String>())
+            .unwrap_or_default()
+    };
     let mut battery = [None, None, None];
-    if let Some(bv) = dict.get("Battery").and_then(|v| v.get::<HashMap<String, glib::Variant>>()) {
+    if let Some(bv) = dict
+        .get("Battery")
+        .and_then(|v| v.get::<HashMap<String, glib::Variant>>())
+    {
         for (i, key) in ["left", "right", "case"].iter().enumerate() {
             battery[i] = bv.get(*key).and_then(|v| v.get::<(i32, bool)>());
         }
@@ -310,7 +334,9 @@ fn sni_prop(name: &str, status: &Arc<Mutex<String>>) -> glib::Variant {
         "Status" => status.lock().unwrap().clone().to_variant(),
         "WindowId" => 0i32.to_variant(),
         "IconThemePath" => "".to_variant(),
-        "Menu" => glib::variant::ObjectPath::try_from("/NO_DBUSMENU").unwrap().to_variant(),
+        "Menu" => glib::variant::ObjectPath::try_from("/NO_DBUSMENU")
+            .unwrap()
+            .to_variant(),
         "ItemIsMenu" => false.to_variant(),
         "IconName" => "audio-headphones".to_variant(),
         "IconPixmap" => Vec::<(i32, i32, Vec<u8>)>::new().to_variant(),
@@ -343,7 +369,10 @@ impl StatusNotifier {
         let node = gio::DBusNodeInfo::for_xml(SNI_XML)?;
         let iface = node.interfaces()[0].clone();
         let status = Arc::new(Mutex::new("Active".to_string()));
-        for path in ["/StatusNotifierItem", "/org/ayatana/NotificationItem/xiaomi_buds5_panel"] {
+        for path in [
+            "/StatusNotifierItem",
+            "/org/ayatana/NotificationItem/xiaomi_buds5_panel",
+        ] {
             let q = queue.clone();
             let st_get = status.clone();
             conn.register_object(
@@ -380,7 +409,10 @@ impl StatusNotifier {
         if let Err(e) = register_watcher(conn) {
             eprintln!("[xiaomi-buds5-tray] SNI registration failed: {}", e);
         }
-        Ok(Rc::new(StatusNotifier { conn: conn.clone(), status }))
+        Ok(Rc::new(StatusNotifier {
+            conn: conn.clone(),
+            status,
+        }))
     }
 
     fn set_status(&self, s: &str) {
@@ -679,15 +711,18 @@ impl App {
             }
         });
         let a = self.clone();
-        self.volume.connect_value_changed(move |s| a.on_volume_changed(s));
+        self.volume
+            .connect_value_changed(move |s| a.on_volume_changed(s));
         let a = self.clone();
-        self.settings_btn.connect_clicked(move |_| a.show_settings(true));
+        self.settings_btn
+            .connect_clicked(move |_| a.show_settings(true));
         let a = self.clone();
         self.reconnect_btn.connect_clicked(move |_| {
             let _ = a.call("Connect", None, 5000);
         });
         let a = self.clone();
-        self.back_btn.connect_clicked(move |_| a.show_settings(false));
+        self.back_btn
+            .connect_clicked(move |_| a.show_settings(false));
         for (i, b) in self.mode_buttons.iter().enumerate() {
             let a = self.clone();
             b.connect_clicked(move |_| a.set_mode(i as i32));
@@ -740,8 +775,17 @@ impl App {
         }
     }
 
-    fn call(&self, method: &str, params: Option<glib::Variant>, timeout_ms: i32) -> Result<(), String> {
-        let timeout = if method == "SetAudioBackend" { 75000 } else { timeout_ms };
+    fn call(
+        &self,
+        method: &str,
+        params: Option<glib::Variant>,
+        timeout_ms: i32,
+    ) -> Result<(), String> {
+        let timeout = if method == "SetAudioBackend" {
+            75000
+        } else {
+            timeout_ms
+        };
         match self.conn.call_sync(
             Some(BUS),
             PATH,
@@ -793,13 +837,25 @@ impl App {
         *self.state.borrow_mut() = state.clone();
         let connected = state.connected;
         let has_cache = state.has_cache;
-        let name = if state.name.is_empty() { "Xiaomi Buds 5".to_string() } else { state.name.clone() };
+        let name = if state.name.is_empty() {
+            "Xiaomi Buds 5".to_string()
+        } else {
+            state.name.clone()
+        };
         self.title.set_text(&name);
         self.hero_title.set_text(&name);
         let bt = state.bluetooth_connected || connected;
         if !connected && !has_cache {
-            self.status.set_text(if bt { "蓝牙已连接 · 等待音频" } else { "未连接电脑" });
-            self.hero_status.set_text(if bt { "手机可能在播放" } else { "未连接电脑" });
+            self.status.set_text(if bt {
+                "蓝牙已连接 · 等待音频"
+            } else {
+                "未连接电脑"
+            });
+            self.hero_status.set_text(if bt {
+                "手机可能在播放"
+            } else {
+                "未连接电脑"
+            });
             for v in self.battery_cells.values() {
                 v.set_text("—");
             }
@@ -810,7 +866,11 @@ impl App {
         }
         for (i, key) in ["left", "right", "case"].iter().enumerate() {
             let (pct, chg) = state.battery[i].unwrap_or((-1, false));
-            let mut text = if pct < 0 { "未检测".to_string() } else { format!("{}%", pct) };
+            let mut text = if pct < 0 {
+                "未检测".to_string()
+            } else {
+                format!("{}%", pct)
+            };
             if chg && pct >= 0 {
                 text.push_str(" ↑");
             }
@@ -820,10 +880,14 @@ impl App {
         }
         let mode = state.noise_mode as usize;
         let level = state.noise_level as usize;
-        let mode_text = MODES.get(mode).map(|s| s.to_string()).unwrap_or_else(|| "未知".to_string());
+        let mode_text = MODES
+            .get(mode)
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "未知".to_string());
         if connected {
             self.status.set_text(&format!("已连接 · {}", mode_text));
-            self.hero_status.set_text(&format!("已连接 · {}", mode_text));
+            self.hero_status
+                .set_text(&format!("已连接 · {}", mode_text));
         } else if bt {
             self.status.set_text("蓝牙已连接 · 等待音频");
             self.hero_status.set_text("蓝牙已连接 · 手机可能在播放");
@@ -861,7 +925,11 @@ impl App {
         let bt = state.bluetooth_connected || connected;
         for (i, key) in ["left", "right", "case"].iter().enumerate() {
             let (pct, chg) = state.battery[i].unwrap_or((-1, false));
-            let mut text = if pct < 0 { "未检测".to_string() } else { format!("{}%", pct) };
+            let mut text = if pct < 0 {
+                "未检测".to_string()
+            } else {
+                format!("{}%", pct)
+            };
             if chg && pct >= 0 {
                 text.push_str(" ↑");
             }
@@ -870,15 +938,27 @@ impl App {
             }
         }
         if !connected && !has_cache {
-            self.status.set_text(if bt { "蓝牙已连接 · 等待音频" } else { "未连接电脑" });
-            self.hero_status.set_text(if bt { "手机可能在播放" } else { "未连接电脑" });
+            self.status.set_text(if bt {
+                "蓝牙已连接 · 等待音频"
+            } else {
+                "未连接电脑"
+            });
+            self.hero_status.set_text(if bt {
+                "手机可能在播放"
+            } else {
+                "未连接电脑"
+            });
             return;
         }
         let mode = state.noise_mode as usize;
-        let mode_text = MODES.get(mode).map(|s| s.to_string()).unwrap_or_else(|| "未知".to_string());
+        let mode_text = MODES
+            .get(mode)
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "未知".to_string());
         if connected {
             self.status.set_text(&format!("已连接 · {}", mode_text));
-            self.hero_status.set_text(&format!("已连接 · {}", mode_text));
+            self.hero_status
+                .set_text(&format!("已连接 · {}", mode_text));
         } else if bt {
             self.status.set_text("蓝牙已连接 · 等待音频");
             self.hero_status.set_text("手机可能在播放");
@@ -914,7 +994,11 @@ impl App {
             }
         }
         for (index, (name, desc)) in codecs.iter().enumerate() {
-            let text = if codec_label(name) == *name && !desc.is_empty() { desc.clone() } else { codec_label(name) };
+            let text = if codec_label(name) == *name && !desc.is_empty() {
+                desc.clone()
+            } else {
+                codec_label(name)
+            };
             let button = gtk::Button::with_label(&text);
             button.set_relief(gtk::ReliefStyle::None);
             button.set_hexpand(true);
@@ -925,25 +1009,38 @@ impl App {
             let a = self.this();
             let n = name.clone();
             button.connect_clicked(move |_| a.codec_changed(&n));
-            self.codec_grid.attach(&button, (index % 2) as i32, (index / 2) as i32, 1, 1);
+            self.codec_grid
+                .attach(&button, (index % 2) as i32, (index / 2) as i32, 1, 1);
         }
         let adaptive = has_adaptive();
         for (key, button) in &self.backend_buttons {
             set_selected(button, (*key == "adaptive") == adaptive);
         }
-        let cur_label = if current.is_empty() { "—".to_string() } else { codec_label(current) };
-        self.codec_label.set_text(&format!("蓝牙协议 · {}", cur_label));
+        let cur_label = if current.is_empty() {
+            "—".to_string()
+        } else {
+            codec_label(current)
+        };
+        self.codec_label
+            .set_text(&format!("蓝牙协议 · {}", cur_label));
         self.codec_grid.show_all();
         self.syncing.set(false);
     }
 
     fn resolve_pending(&self) {
         let pending = self.pending.borrow().clone();
-        let Some((kind, target)) = pending else { return };
+        let Some((kind, target)) = pending else {
+            return;
+        };
         let state = self.state.borrow().clone();
-        let current = if kind == "codec" { state.codec.clone() } else { state.audio_backend.clone() };
+        let current = if kind == "codec" {
+            state.codec.clone()
+        } else {
+            state.audio_backend.clone()
+        };
         if !state.last_error.is_empty() {
-            self.status.set_text(&format!("切换失败：{}", state.last_error));
+            self.status
+                .set_text(&format!("切换失败：{}", state.last_error));
             *self.pending.borrow_mut() = None;
         } else if current == target {
             let text = if kind == "codec" {
@@ -969,7 +1066,11 @@ impl App {
         if self.syncing.get() {
             return;
         }
-        let _ = self.call("SetNoiseLevel", Some((1u32, level as u32).to_variant()), 5000);
+        let _ = self.call(
+            "SetNoiseLevel",
+            Some((1u32, level as u32).to_variant()),
+            5000,
+        );
     }
 
     fn set_backend(&self, backend: &str) {
@@ -985,14 +1086,20 @@ impl App {
     fn codec_changed(&self, codec: &str) {
         let backend = {
             let b = self.state.borrow().audio_backend.clone();
-            if b.is_empty() { "pulse".to_string() } else { b }
+            if b.is_empty() {
+                "pulse".to_string()
+            } else {
+                b
+            }
         };
         if self.state.borrow().codec == codec {
-            self.status.set_text(&format!("已是 {}", codec_label(codec)));
+            self.status
+                .set_text(&format!("已是 {}", codec_label(codec)));
             return;
         }
         *self.pending.borrow_mut() = Some(("codec".to_string(), codec.to_string()));
-        self.status.set_text(&format!("正在切换编码：{}…", codec_label(codec)));
+        self.status
+            .set_text(&format!("正在切换编码：{}…", codec_label(codec)));
         self.spawn_switch(&backend, codec);
     }
 
@@ -1111,7 +1218,9 @@ impl App {
         let height = self.window.preferred_height().1.min(720);
         self.window.resize(width, height);
         let (ax, ay) = anchor.unwrap_or_else(|| self.pointer_position());
-        let mut x = (ax - width / 2).max(work.x() + 12).min(work.x() + work.width() - width - 12);
+        let mut x = (ax - width / 2)
+            .max(work.x() + 12)
+            .min(work.x() + work.width() - width - 12);
         let below = work.y() + work.height() - ay;
         let above = ay - work.y();
         let mut y = if below >= height + 24 || below >= above {
@@ -1226,13 +1335,11 @@ fn start_socket_listener(queue: Queue) {
         Ok(listener) => {
             std::thread::spawn(move || {
                 use std::io::Read;
-                for conn in listener.incoming() {
-                    if let Ok(mut c) = conn {
-                        let mut buf = [0u8; 32];
-                        let n = c.read(&mut buf).unwrap_or(0);
-                        if String::from_utf8_lossy(&buf[..n]).trim() == "show" {
-                            queue.lock().unwrap().push_back(Msg::Show(None));
-                        }
+                for mut c in listener.incoming().flatten() {
+                    let mut buf = [0u8; 32];
+                    let n = c.read(&mut buf).unwrap_or(0);
+                    if String::from_utf8_lossy(&buf[..n]).trim() == "show" {
+                        queue.lock().unwrap().push_back(Msg::Show(None));
                     }
                 }
             });
@@ -1321,8 +1428,10 @@ mod tests {
         batt.insert("right".into(), (82i32, true).to_variant());
         batt.insert("case".into(), (-1i32, false).to_variant());
         dict.insert("Battery".into(), batt.to_variant());
-        let codecs: Vec<(String, String)> =
-            vec![("sbc".into(), "SBC".into()), ("aptx_adaptive_ll".into(), "aptX Adaptive LL".into())];
+        let codecs: Vec<(String, String)> = vec![
+            ("sbc".into(), "SBC".into()),
+            ("aptx_adaptive_ll".into(), "aptX Adaptive LL".into()),
+        ];
         dict.insert("Codecs".into(), codecs.to_variant());
 
         let s = parse_state(&dict);
