@@ -1,0 +1,7 @@
+{
+  "uuid": "xiaomi-buds5-panel@kang",
+  "name": "Xiaomi Buds 5 Panel",
+  "description": "Control Xiaomi Buds 5 noise mode and view battery from the GNOME quick settings panel.",
+  "shell-version": ["43"],
+  "version": 1
+}

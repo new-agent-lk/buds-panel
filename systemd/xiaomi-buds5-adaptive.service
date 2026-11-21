@@ -1,0 +1,14 @@
+[Unit]
+Description=Xiaomi Buds 5 aptX Adaptive audio stack
+After=bluetooth.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=@ROOT@/audio-adaptive/run.sh
+ExecStop=@ROOT@/audio-adaptive/stop.sh
+Restart=no
+TimeoutStopSec=30
+
+[Install]
+WantedBy=graphical-session.target

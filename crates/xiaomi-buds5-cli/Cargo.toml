@@ -1,0 +1,12 @@
+[package]
+name = "xiaomi-buds5-cli"
+version = "0.1.0"
+edition = "2021"
+description = "Thin D-Bus client for the Xiaomi Buds 5 control service"
+
+[[bin]]
+name = "xiaomi-buds5"
+path = "src/main.rs"
+
+[dependencies]
+zbus = "5.19"

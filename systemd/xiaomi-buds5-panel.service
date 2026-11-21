@@ -1,0 +1,13 @@
+[Unit]
+Description=Xiaomi Buds 5 Bluetooth control service
+After=graphical-session.target bluetooth.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/xiaomi-buds5-service
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target

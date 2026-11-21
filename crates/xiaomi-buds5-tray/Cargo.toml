@@ -1,0 +1,16 @@
+[package]
+name = "xiaomi-buds5-tray"
+version = "0.1.0"
+edition = "2021"
+description = "GTK3 status tray + popover for the Xiaomi Buds 5 panel"
+
+[[bin]]
+name = "xiaomi-buds5-tray"
+path = "src/main.rs"
+
+[dependencies]
+gtk = "0.18"
+gdk = "0.18"
+gio = "0.18"
+glib = "0.18"
+gdk-pixbuf = "0.18"

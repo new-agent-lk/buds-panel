@@ -1,0 +1,14 @@
+.buds-panel { padding: 12px; spacing: 8px; width: 330px; }
+.buds-header { spacing: 8px; }
+.buds-title { font-weight: bold; font-size: 16px; }
+.buds-muted { color: #999; font-size: 12px; }
+.buds-section { margin-top: 8px; color: #aaa; font-size: 11px; font-weight: bold; }
+.buds-row { spacing: 8px; }
+.buds-value { width: 38px; color: #ccc; font-size: 12px; }
+.buds-buttons { spacing: 6px; }
+.buds-button { padding: 7px 8px; border-radius: 8px; background-color: rgba(255,255,255,0.10); }
+.buds-button.selected { background-color: #3584e4; color: white; }
+.buds-codecs { spacing: 4px; }
+.buds-codec { padding: 6px 8px; border-radius: 8px; background-color: rgba(255,255,255,0.08); }
+.buds-codec.selected { background-color: #3584e4; color: white; }
+.buds-close { padding: 2px 6px; border-radius: 8px; }

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Xiaomi Buds 5 Tray
+Comment=Battery, noise control and volume for Xiaomi Buds 5
+Exec=systemctl --user start xiaomi-buds5-tray.service
+Icon=audio-headphones
+Terminal=false
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

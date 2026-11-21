@@ -1,0 +1,19 @@
+# Rust build artifacts
+/target/
+
+# Bundled/experimental aptX Adaptive stack — not shipped in the v0.1 source repo
+# (prebuilt runtime is distributed via GitHub Release assets; source via submodule/clone)
+/runtime/
+/experimental-aptx-adaptive/
+/aptx-adaptive-linux/
+
+# Internal wayfinder issue-tracker + local tooling metadata
+/.scratch/
+/docs/agents/
+/.dsh-mattskillsdeck-cache/
+/.dsh-write-probe
+
+# Local logs / OS cruft
+*.log
+*.swp
+.DS_Store

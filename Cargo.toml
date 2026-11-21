@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["crates/xiaomi-buds5-service", "crates/xiaomi-buds5-tray", "crates/xiaomi-buds5-cli"]
+# The vendored aptX encoder, runtime and experimental trees are independent
+# Cargo projects / scripts; keep them out of this workspace.
+exclude = ["aptx-adaptive-linux", "runtime", "experimental-aptx-adaptive"]
+
+[profile.release]
+opt-level = 2
+lto = "thin"
+strip = true
