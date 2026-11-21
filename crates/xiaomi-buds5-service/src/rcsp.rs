@@ -34,7 +34,10 @@ pub struct BudsError {
 
 impl BudsError {
     pub fn new(msg: impl Into<String>) -> Self {
-        BudsError { msg: msg.into(), errno: None }
+        BudsError {
+            msg: msg.into(),
+            errno: None,
+        }
     }
     pub fn os(context: &str, errno: i32) -> Self {
         BudsError {
@@ -98,7 +101,11 @@ impl Frame {
     }
     pub fn data(&self) -> &[u8] {
         let skip = if self.is_command() {
-            if self.opcode == 0x01 { 2 } else { 1 }
+            if self.opcode == 0x01 {
+                2
+            } else {
+                1
+            }
         } else if self.opcode == 0x01 {
             1
         } else {
@@ -197,10 +204,14 @@ pub fn parse_tlvs_u8(data: &[u8]) -> Vec<(u8, Vec<u8>)> {
 }
 
 fn tlv_get_u8(list: &[(u8, Vec<u8>)], id: u8) -> Option<&[u8]> {
-    list.iter().find(|(k, _)| *k == id).map(|(_, v)| v.as_slice())
+    list.iter()
+        .find(|(k, _)| *k == id)
+        .map(|(_, v)| v.as_slice())
 }
 fn tlv_get_u16(list: &[(u16, Vec<u8>)], id: u16) -> Option<&[u8]> {
-    list.iter().find(|(k, _)| *k == id).map(|(_, v)| v.as_slice())
+    list.iter()
+        .find(|(k, _)| *k == id)
+        .map(|(_, v)| v.as_slice())
 }
 
 pub fn tlv_u16(config_id: u16, value: &[u8]) -> Vec<u8> {
@@ -215,9 +226,15 @@ pub fn decode_battery(value: &[u8]) -> Vec<Cell> {
         .iter()
         .map(|&raw| {
             if raw == 0xFF {
-                Cell { percent: None, charging: false }
+                Cell {
+                    percent: None,
+                    charging: false,
+                }
             } else {
-                Cell { percent: Some(raw & 0x7F), charging: raw & 0x80 != 0 }
+                Cell {
+                    percent: Some(raw & 0x7F),
+                    charging: raw & 0x80 != 0,
+                }
             }
         })
         .collect()
@@ -335,7 +352,12 @@ impl RfcommSocket {
     fn send_all(&self, mut data: &[u8]) -> Result<()> {
         while !data.is_empty() {
             let n = unsafe {
-                libc::send(self.fd, data.as_ptr() as *const libc::c_void, data.len(), libc::MSG_NOSIGNAL)
+                libc::send(
+                    self.fd,
+                    data.as_ptr() as *const libc::c_void,
+                    data.len(),
+                    libc::MSG_NOSIGNAL,
+                )
             };
             if n < 0 {
                 return Err(BudsError::os("send", last_errno()));
@@ -651,7 +673,10 @@ mod tests {
         let frames = extract_frames(&mut buf);
         assert_eq!(frames.len(), 1);
         assert_eq!(frames[0].opcode, 0xF3);
-        assert_eq!(parse_tlvs_u16(b"\x04\x00\x0b\x01\x02"), vec![(11u16, vec![0x01, 0x02])]);
+        assert_eq!(
+            parse_tlvs_u16(b"\x04\x00\x0b\x01\x02"),
+            vec![(11u16, vec![0x01, 0x02])]
+        );
     }
 
     #[test]
@@ -662,7 +687,8 @@ mod tests {
         assert_eq!((cells[1].percent, cells[1].charging), (Some(99), false));
         assert_eq!((cells[2].percent, cells[2].charging), (None, false));
 
-        let notif = parse_battery_notification(&[0x04, 0x00, 0x61, 0x5f, 0xff, 0x02, 0x04, 0x00]).unwrap();
+        let notif =
+            parse_battery_notification(&[0x04, 0x00, 0x61, 0x5f, 0xff, 0x02, 0x04, 0x00]).unwrap();
         assert_eq!(notif.len(), 3);
         assert_eq!((notif[0].percent, notif[0].charging), (Some(97), false));
         assert_eq!((notif[1].percent, notif[1].charging), (Some(95), false));

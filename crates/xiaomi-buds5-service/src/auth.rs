@@ -5,6 +5,17 @@
 //! 256-byte tables and the mixing network are reproduced exactly; the unit test
 //! below checks the same three hardware-captured vectors the Python selftest uses.
 
+// Faithful line-for-line port of the reference algorithm: keep its arithmetic
+// form (`w = w + …`), rotate-by-constant and indexed loops rather than rewriting
+// them to satisfy style lints — the byte-for-byte correspondence is the point.
+#![allow(
+    clippy::assign_op_pattern,
+    clippy::identity_op,
+    clippy::manual_rotate,
+    clippy::needless_late_init,
+    clippy::needless_range_loop
+)]
+
 use std::sync::OnceLock;
 
 const TAB_EXPAND_HEX: &str = "64ac285ac9b337c50a10b7a3bab197463d05dc666ef69af80d589567c6aaabec\
@@ -100,7 +111,8 @@ fn expand_key(key: &[u8; 16]) -> [u8; 272] {
         let table_base = r * 16;
         let out_base = 16 + r * 16;
         for j in 0..16 {
-            buf[out_base + j] = tab_expand()[table_base + 15 - j].wrapping_add(window[(r + 1 + j) % 17]);
+            buf[out_base + j] =
+                tab_expand()[table_base + 15 - j].wrapping_add(window[(r + 1 + j) % 17]);
         }
     }
     buf
@@ -109,7 +121,8 @@ fn expand_key(key: &[u8; 16]) -> [u8; 272] {
 /// One unrolled linear mixing block over the 16 state bytes (sub_176c).
 fn round16(b: [i32; 16]) -> [i32; 16] {
     let (b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15) = (
-        b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15],
+        b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12], b[13],
+        b[14], b[15],
     );
 
     let mut w7 = b1 + 2 * b0;
@@ -215,7 +228,11 @@ fn mix(state: &[u8; 16], sched: &[u8; 272], flag: bool) -> [u8; 16] {
         let base = rnd * 32;
         if flag && rnd == 2 {
             for i in 0..16 {
-                out[i] = if sel(i) { out[i] ^ orig[i] } else { out[i] + orig[i] };
+                out[i] = if sel(i) {
+                    out[i] ^ orig[i]
+                } else {
+                    out[i] + orig[i]
+                };
             }
         }
         for i in 0..16 {
@@ -259,9 +276,18 @@ mod tests {
     #[test]
     fn hardware_vectors_match() {
         let cases = [
-            ("385c2aecb03bfb32af3c54ec18db5c02", "99a16782b8e05df000099bc2cb3417bf"),
-            ("1afe43fbfaaa3afb29d1e6053c7c9475", "f011ccd271c9d429d14bd4887d825611"),
-            ("acbb8a57b2d58c8aa24d2fb232cbddb7", "e696a4c36f460b55ca6f5b8fb0a4c7f8"),
+            (
+                "385c2aecb03bfb32af3c54ec18db5c02",
+                "99a16782b8e05df000099bc2cb3417bf",
+            ),
+            (
+                "1afe43fbfaaa3afb29d1e6053c7c9475",
+                "f011ccd271c9d429d14bd4887d825611",
+            ),
+            (
+                "acbb8a57b2d58c8aa24d2fb232cbddb7",
+                "e696a4c36f460b55ca6f5b8fb0a4c7f8",
+            ),
         ];
         for (chal, want) in cases {
             let got = transform(&ADDR6_PLACEHOLDER, &hex_decode(chal).try_into().unwrap());

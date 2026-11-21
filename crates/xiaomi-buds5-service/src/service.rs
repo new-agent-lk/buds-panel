@@ -71,7 +71,9 @@ fn codec_name(alias: &str, description: Option<&str>) -> String {
         "aptx" => "aptX Classic".into(),
         "sbc" => "SBC".into(),
         "sbc_xq" => "SBC-XQ".into(),
-        other => description.map(|s| s.to_string()).unwrap_or_else(|| other.to_string()),
+        other => description
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| other.to_string()),
     }
 }
 
@@ -83,9 +85,18 @@ fn codec_has_adaptive(codecs: &[(String, String)]) -> bool {
 }
 fn aptx_hint_codecs() -> Vec<(String, String)> {
     vec![
-        ("aptx_adaptive_hq".into(), "aptX Adaptive HQ（需安装可选栈）".into()),
-        ("aptx_adaptive".into(), "aptX Adaptive（动态）（需安装可选栈）".into()),
-        ("aptx_adaptive_ll".into(), "aptX Adaptive LL（低延迟）（需安装可选栈）".into()),
+        (
+            "aptx_adaptive_hq".into(),
+            "aptX Adaptive HQ（需安装可选栈）".into(),
+        ),
+        (
+            "aptx_adaptive".into(),
+            "aptX Adaptive（动态）（需安装可选栈）".into(),
+        ),
+        (
+            "aptx_adaptive_ll".into(),
+            "aptX Adaptive LL（低延迟）（需安装可选栈）".into(),
+        ),
     ]
 }
 
@@ -136,7 +147,10 @@ fn save_cache(inner: &Inner) {
         battery: inner
             .battery
             .iter()
-            .map(|c| CachedCell { percent: c.percent, charging: c.charging })
+            .map(|c| CachedCell {
+                percent: c.percent,
+                charging: c.charging,
+            })
             .collect(),
         noise_mode: inner.noise_mode,
         noise_level: inner.noise_level,
@@ -161,7 +175,10 @@ fn run_pactl(args: &[&str]) -> Option<Output> {
     let mut cmd = Command::new("pactl");
     cmd.args(args);
     if adaptive_state().exists() {
-        cmd.env("PULSE_SERVER", format!("unix:{}/pulse/native", adaptive_runtime().display()));
+        cmd.env(
+            "PULSE_SERVER",
+            format!("unix:{}/pulse/native", adaptive_runtime().display()),
+        );
     }
     cmd.output().ok()
 }
@@ -170,7 +187,11 @@ fn refresh_audio_state(inner: &Arc<Mutex<Inner>>) {
     let server = run_pactl(&["info"])
         .map(|o| String::from_utf8_lossy(&o.stdout).to_lowercase())
         .unwrap_or_default();
-    let backend = if server.contains("pipewire") { "adaptive" } else { "pulse" };
+    let backend = if server.contains("pipewire") {
+        "adaptive"
+    } else {
+        "pulse"
+    };
 
     let address = inner.lock().unwrap().address.clone();
     let card = format!("/card/{}/bluez", bluez_card_name(&address));
@@ -198,7 +219,8 @@ fn refresh_audio_state(inner: &Arc<Mutex<Inner>>) {
     let raw = run_pactl(&["send-message", &card, "get-codec"])
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
         .unwrap_or_default();
-    let current = serde_json::from_str::<String>(&raw).unwrap_or_else(|_| raw.trim_matches('"').to_string());
+    let current =
+        serde_json::from_str::<String>(&raw).unwrap_or_else(|_| raw.trim_matches('"').to_string());
 
     let mut inner = inner.lock().unwrap();
     inner.audio_backend = backend.to_string();
@@ -281,7 +303,11 @@ fn default_sink_volume_mute() -> (String, bool) {
         })
         .unwrap_or_else(|| "100%".to_string());
     let mute = run_pactl(&["get-sink-mute", "@DEFAULT_SINK@"])
-        .map(|o| String::from_utf8_lossy(&o.stdout).to_lowercase().contains("yes"))
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .to_lowercase()
+                .contains("yes")
+        })
         .unwrap_or(false);
     (vol, mute)
 }
@@ -343,7 +369,12 @@ fn ensure_explicit_profile(inner: &Arc<Mutex<Inner>>) -> bool {
     true
 }
 
-fn switch_audio_backend(backend: &str, codec: &str, inner: &Arc<Mutex<Inner>>, address: &str) -> Result<(), String> {
+fn switch_audio_backend(
+    backend: &str,
+    codec: &str,
+    inner: &Arc<Mutex<Inner>>,
+    address: &str,
+) -> Result<(), String> {
     let _ = address; // routing is re-asserted below instead of a disconnect/connect cycle
     if backend != "pulse" && backend != "adaptive" {
         return Err("audio backend must be pulse or adaptive".into());
@@ -498,7 +529,11 @@ fn pactl_err(o: &Output) -> String {
     let out = String::from_utf8_lossy(&o.stdout);
     let msg = if !err.trim().is_empty() { err } else { out };
     let msg = msg.trim();
-    if msg.is_empty() { "编码切换失败".into() } else { msg.to_string() }
+    if msg.is_empty() {
+        "编码切换失败".into()
+    } else {
+        msg.to_string()
+    }
 }
 
 // --- D-Bus interface -----------------------------------------------------
@@ -525,7 +560,9 @@ fn battery_map(inner: &Inner) -> HashMap<String, OwnedValue> {
     let mut out = HashMap::new();
     for (i, cell) in inner.battery.iter().take(3).enumerate() {
         let percent = cell.percent.map(|p| p as i32).unwrap_or(-1);
-        let v: OwnedValue = Value::from((percent, cell.charging)).try_to_owned().unwrap();
+        let v: OwnedValue = Value::from((percent, cell.charging))
+            .try_to_owned()
+            .unwrap();
         out.insert(names[i].to_string(), v);
     }
     out
@@ -536,22 +573,40 @@ fn state_map(inner: &Inner) -> HashMap<String, OwnedValue> {
     m.insert("connected".into(), OwnedValue::from(inner.connected));
     m.insert("name".into(), ov_str(&inner.name));
     m.insert("address".into(), ov_str(&inner.address));
-    m.insert("battery".into(), Value::from(battery_map(inner)).try_to_owned().unwrap());
+    m.insert(
+        "battery".into(),
+        Value::from(battery_map(inner)).try_to_owned().unwrap(),
+    );
     m.insert("noiseMode".into(), OwnedValue::from(inner.noise_mode));
     m.insert("noiseLevel".into(), OwnedValue::from(inner.noise_level));
     m.insert("lastError".into(), ov_str(&inner.last_error));
     m.insert("lastSeen".into(), OwnedValue::from(inner.last_seen));
-    m.insert("hasCachedState".into(), OwnedValue::from(!inner.battery.is_empty()));
-    m.insert("bluetoothConnected".into(), OwnedValue::from(inner.bluetooth_connected));
+    m.insert(
+        "hasCachedState".into(),
+        OwnedValue::from(!inner.battery.is_empty()),
+    );
+    m.insert(
+        "bluetoothConnected".into(),
+        OwnedValue::from(inner.bluetooth_connected),
+    );
     m.insert("audioBackend".into(), ov_str(&inner.audio_backend));
     m.insert("codec".into(), ov_str(&inner.codec));
-    m.insert("codecs".into(), Value::from(inner.codecs.clone()).try_to_owned().unwrap());
+    m.insert(
+        "codecs".into(),
+        Value::from(inner.codecs.clone()).try_to_owned().unwrap(),
+    );
     m
 }
 
 fn emit(conn: &Connection, inner: &Inner) {
     let body = state_map(inner);
-    if let Err(e) = conn.emit_signal(None::<&str>, OBJECT_PATH, INTERFACE, "StateChanged", &(body,)) {
+    if let Err(e) = conn.emit_signal(
+        None::<&str>,
+        OBJECT_PATH,
+        INTERFACE,
+        "StateChanged",
+        &(body,),
+    ) {
         eprintln!("emit StateChanged failed: {e}");
     }
 }
@@ -568,7 +623,9 @@ impl Service {
 
     fn set_noise_mode(&self, mode: u32) -> zbus::fdo::Result<()> {
         if mode > 2 {
-            return Err(zbus::fdo::Error::Failed("noise mode must be 0, 1, or 2".into()));
+            return Err(zbus::fdo::Error::Failed(
+                "noise mode must be 0, 1, or 2".into(),
+            ));
         }
         let connected = self.inner.lock().unwrap().connected;
         if !connected {
@@ -841,7 +898,11 @@ impl Worker {
         let name = info
             .as_ref()
             .ok()
-            .map(|i| i.name.trim_matches(|c: char| c == '\0' || c == ' ').to_string())
+            .map(|i| {
+                i.name
+                    .trim_matches(|c: char| c == '\0' || c == ' ')
+                    .to_string()
+            })
             .filter(|s| !s.is_empty());
         {
             let mut inner = self.inner.lock().unwrap();
@@ -927,7 +988,9 @@ impl Worker {
                     Err(exc) => {
                         self.rfcomm_failures += 1;
                         self.set_connected_false(Some(&exc.msg));
-                        let backoff = 120.0_f64.min(8.0 * 2f64.powi(self.rfcomm_failures.saturating_sub(1).min(4) as i32));
+                        let backoff = 120.0_f64.min(
+                            8.0 * 2f64.powi(self.rfcomm_failures.saturating_sub(1).min(4) as i32),
+                        );
                         eprintln!(
                             "[xiaomi-buds5-panel] connect failed ({}): {}; retry in {:.0}s",
                             self.rfcomm_failures, exc.msg, backoff
@@ -1006,7 +1069,10 @@ pub fn run(mac: Option<String>, verbose: bool) -> Result<(), Box<dyn std::error:
         battery: cache
             .battery
             .iter()
-            .map(|c| Cell { percent: c.percent, charging: c.charging })
+            .map(|c| Cell {
+                percent: c.percent,
+                charging: c.charging,
+            })
             .collect(),
         noise_mode: cache.noise_mode,
         noise_level: cache.noise_level,
@@ -1020,7 +1086,10 @@ pub fn run(mac: Option<String>, verbose: bool) -> Result<(), Box<dyn std::error:
     }));
 
     let (tx, rx) = mpsc::channel();
-    let service = Service { inner: inner.clone(), tx };
+    let service = Service {
+        inner: inner.clone(),
+        tx,
+    };
 
     let conn = zbus::blocking::connection::Builder::session()?
         .name(BUS_NAME)?
@@ -1113,7 +1182,10 @@ mod tests {
     fn maps_codecs_to_explicit_profiles() {
         // The auto-profile guard relies on this map to pick a stable profile.
         assert_eq!(explicit_profile_for("aptx_adaptive_ll"), Some("a2dp-sink"));
-        assert_eq!(explicit_profile_for("aptx_adaptive_hq"), Some("a2dp-sink-aptx_adaptive_hq"));
+        assert_eq!(
+            explicit_profile_for("aptx_adaptive_hq"),
+            Some("a2dp-sink-aptx_adaptive_hq")
+        );
         assert_eq!(explicit_profile_for("sbc"), Some("a2dp-sink-sbc"));
         assert_eq!(explicit_profile_for("unknown"), None);
     }

@@ -19,8 +19,13 @@ fn usage() -> ! {
 }
 
 fn main() {
-    let mut mac: Option<String> = std::env::var("XIAOMI_BUDS5_MAC").ok().filter(|s| !s.is_empty());
-    let mut verbose = matches!(std::env::var("XIAOMI_BUDS5_VERBOSE").as_deref(), Ok("1") | Ok("true"));
+    let mut mac: Option<String> = std::env::var("XIAOMI_BUDS5_MAC")
+        .ok()
+        .filter(|s| !s.is_empty());
+    let mut verbose = matches!(
+        std::env::var("XIAOMI_BUDS5_VERBOSE").as_deref(),
+        Ok("1") | Ok("true")
+    );
 
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
