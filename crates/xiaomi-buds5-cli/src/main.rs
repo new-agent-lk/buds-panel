@@ -75,7 +75,11 @@ fn status() -> Res {
         cell("right"),
         cell("case")
     );
-    println!("降噪     : {} (强度 {})", mode_name(mode), level_name(level));
+    println!(
+        "降噪     : {} (强度 {})",
+        mode_name(mode),
+        level_name(level)
+    );
     println!("音频后端 : {backend}    编码: {codec}");
     if !last_error.is_empty() {
         println!("最近错误 : {last_error}");
@@ -99,7 +103,11 @@ fn selftest() -> Res {
     println!("控制通道 : {}", if connected { "已连接" } else { "未连接" });
     println!(
         "最近错误 : {}",
-        if last_error.is_empty() { "无" } else { &last_error }
+        if last_error.is_empty() {
+            "无"
+        } else {
+            &last_error
+        }
     );
     // A missing control channel is normal while a phone owns the buds; only a
     // dropped bluetooth link or a recorded error is a real failure.
