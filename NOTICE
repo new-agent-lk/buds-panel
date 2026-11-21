@@ -1,0 +1,33 @@
+Buds Panel
+Copyright 2026 The Buds Panel Authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+===============================================================================
+Third-party components
+===============================================================================
+
+1. redmi-buds-linux
+   Copyright (c) 2026 Deniz Tunç
+   Licensed under the MIT License (full text: LICENSE.redmi-buds-linux).
+
+   The RCSP authentication key-transform implemented in
+   crates/xiaomi-buds5-service/src/auth.rs is a Rust port of the corresponding
+   algorithm from the redmi-buds-linux project, and is used here under the terms
+   of the MIT License. crates/xiaomi-buds5-service/src/rcsp.rs calls into that
+   ported transform.
+
+===============================================================================
+Optional, out-of-tree component (NOT part of this repository)
+===============================================================================
+
+aptx-adaptive-linux  (https://github.com/AKS-Logic/aptx-adaptive-linux)
+   Copyright (c) 2026 Prateek Mittal (AKS-Logic)
+   Licensed under the MIT License, with additional patent/legal notes in that
+   project's LEGAL.md.
+
+   This project is NOT bundled with, linked into, or relicensed by Buds Panel.
+   The audio-adaptive/ scripts only orchestrate starting/stopping an isolated
+   PipeWire stack that a user may have obtained separately. aptX is subject to
+   Qualcomm patents; distributing prebuilt binaries is out of scope for Buds
+   Panel v0.1. See docs/aptx-adaptive.md for details.

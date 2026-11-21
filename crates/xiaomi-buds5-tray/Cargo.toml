@@ -1,6 +1,6 @@
 [package]
 name = "xiaomi-buds5-tray"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
 description = "GTK3 status tray + popover for the Xiaomi Buds 5 panel"
 

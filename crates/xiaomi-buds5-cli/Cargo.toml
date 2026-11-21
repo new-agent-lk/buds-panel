@@ -1,6 +1,6 @@
 [package]
 name = "xiaomi-buds5-cli"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
 description = "Thin D-Bus client for the Xiaomi Buds 5 control service"
 

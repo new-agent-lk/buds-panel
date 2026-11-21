@@ -1,6 +1,6 @@
 [package]
 name = "xiaomi-buds5-service"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
 description = "D-Bus control service for the Xiaomi Buds 5"
 
