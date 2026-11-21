@@ -9,6 +9,23 @@ if [[ -z ${BUDS_MAC:-} ]]; then
   echo "未找到已配对的耳机（可用 XIAOMI_BUDS5_MAC 指定），无法启动 aptX Adaptive 栈" >&2
   exit 1
 fi
+# The optional stack is not shipped in the source repo (aptX patent isolation).
+# If it is missing, fail loudly with install instructions instead of half-starting.
+if [[ -z ${APTX_STACK:-} || ! -x "$BUILD/daemon/pipewire" ]]; then
+  cat >&2 <<'EOF'
+错误：未找到 aptX Adaptive 可选栈（自定义 PipeWire 1.7 构建 + 打补丁的 bluez5 插件）。
+它不随源码仓库分发（aptX 专利隔离，详见 docs/aptx-adaptive.md）。安装方式二选一：
+  1) 下载预编译栈：  scripts/fetch-aptx-stack.sh
+  2) 自行构建：      git clone https://github.com/AKS-Logic/aptx-adaptive-linux
+                     按其 README 构建后，export XIAOMI_BUDS5_APTX_RUNTIME=<解包/检出目录>
+不装也没关系：面板默认用系统 pactl 的 SBC/AAC，会自动降级、无需本栈。
+EOF
+  exit 1
+fi
+if [[ -z ${APTX_PAYLOAD:-} ]]; then
+  echo "错误：在 $APTX_STACK 下没找到插件载荷（payload/spa 或 experimental/run/spa）。栈不完整，请重新获取。" >&2
+  exit 1
+fi
 mkdir -p "$RUNTIME" "$LOG" "$STATE"
 
 # Refuse to run twice.
@@ -34,8 +51,8 @@ systemctl --user stop pulseaudio.socket pulseaudio.service \
 systemctl --user mask --runtime pulseaudio.socket pulseaudio.service >/dev/null 2>&1 || true
 rm -rf "$RUNTIME"/*
 mkdir -p "$RUNTIME"/{pipewire,pulse,spa/bluez5,wireplumber}
-cp -a "$ROOT/experimental-aptx-adaptive/run/spa/bluez5/." "$RUNTIME/spa/bluez5/"
-cp -a "$ROOT/experimental-aptx-adaptive/run/config/." "$RUNTIME/wireplumber/"
+cp -a "$APTX_PAYLOAD/spa/bluez5/." "$RUNTIME/spa/bluez5/"
+cp -a "$APTX_PAYLOAD/config/." "$RUNTIME/wireplumber/"
 
 export SPA_PLUGIN_DIR="$RUNTIME/spa:$BUILD/spa-plugins"
 export SPA_DATA_DIR="$BUILD/spa-data"
