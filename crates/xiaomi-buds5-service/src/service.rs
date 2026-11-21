@@ -75,6 +75,20 @@ fn codec_name(alias: &str, description: Option<&str>) -> String {
     }
 }
 
+/// When the optional aptX Adaptive stack is not installed, the stock BlueZ card
+/// reports no `aptx_adaptive*` codecs at all. Surface them anyway, clearly
+/// marked, so users know the option exists and how to enable it (docs/aptx-adaptive.md).
+fn codec_has_adaptive(codecs: &[(String, String)]) -> bool {
+    codecs.iter().any(|(a, _)| a.starts_with("aptx_adaptive"))
+}
+fn aptx_hint_codecs() -> Vec<(String, String)> {
+    vec![
+        ("aptx_adaptive_hq".into(), "aptX Adaptive HQ（需安装可选栈）".into()),
+        ("aptx_adaptive".into(), "aptX Adaptive（动态）（需安装可选栈）".into()),
+        ("aptx_adaptive_ll".into(), "aptX Adaptive LL（低延迟）（需安装可选栈）".into()),
+    ]
+}
+
 // --- shared state --------------------------------------------------------
 
 #[derive(Clone)]
@@ -175,6 +189,10 @@ fn refresh_audio_state(inner: &Arc<Mutex<Inner>>) {
                 }
             }
         }
+    }
+
+    if !codec_has_adaptive(&codecs) {
+        codecs.extend(aptx_hint_codecs());
     }
 
     let raw = run_pactl(&["send-message", &card, "get-codec"])
@@ -1089,7 +1107,7 @@ fn wait_for_signal() {
 
 #[cfg(test)]
 mod tests {
-    use super::explicit_profile_for;
+    use super::{aptx_hint_codecs, codec_has_adaptive, explicit_profile_for};
 
     #[test]
     fn maps_codecs_to_explicit_profiles() {
@@ -1098,5 +1116,21 @@ mod tests {
         assert_eq!(explicit_profile_for("aptx_adaptive_hq"), Some("a2dp-sink-aptx_adaptive_hq"));
         assert_eq!(explicit_profile_for("sbc"), Some("a2dp-sink-sbc"));
         assert_eq!(explicit_profile_for("unknown"), None);
+    }
+
+    #[test]
+    fn adaptive_hint_only_when_stack_missing() {
+        // Stock BlueZ (no optional stack) lists no aptx_adaptive* codecs -> we add
+        // three clearly-marked hints so the option stays discoverable.
+        let stock = vec![
+            ("aac".to_string(), "AAC".to_string()),
+            ("sbc".to_string(), "SBC".to_string()),
+        ];
+        assert!(!codec_has_adaptive(&stock));
+        assert_eq!(aptx_hint_codecs().len(), 3);
+
+        // With the stack installed the real codecs are present -> no hints.
+        let with_stack = vec![("aptx_adaptive".to_string(), "x".to_string())];
+        assert!(codec_has_adaptive(&with_stack));
     }
 }
