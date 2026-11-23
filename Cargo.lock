@@ -8357,14 +8357,14 @@ checksum = "163b33ed8786455e2fa5d72f554057ce3f3182425434f756cd39c99839d88e23"
 
 [[package]]
 name = "xiaomi-buds5-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "zbus 5.19.0",
 ]
 
 [[package]]
 name = "xiaomi-buds5-panel-gpui"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "flume",
  "gio",
@@ -8376,7 +8376,7 @@ dependencies = [
 
 [[package]]
 name = "xiaomi-buds5-service"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "libc",
  "serde",
@@ -8386,7 +8386,7 @@ dependencies = [
 
 [[package]]
 name = "xiaomi-buds5-tray"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "gdk",
  "gdk-pixbuf",

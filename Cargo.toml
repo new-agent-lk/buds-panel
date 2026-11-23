@@ -6,7 +6,7 @@ members = ["crates/xiaomi-buds5-service", "crates/xiaomi-buds5-tray", "crates/xi
 exclude = ["aptx-adaptive-linux", "runtime", "experimental-aptx-adaptive"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 
 [profile.release]
 opt-level = 2
