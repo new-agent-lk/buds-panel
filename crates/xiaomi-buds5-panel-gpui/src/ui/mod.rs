@@ -25,6 +25,9 @@ const ACCENT: u32 = 0x007aff;
 const SEG_TRACK: u32 = 0x76768020; // rgba(118,118,128,0.12)
 const HAIRLINE: u32 = 0x0000000e; // rgba(0,0,0,0.055)
 
+/// Chip click handler: index of the picked option, plus the app context.
+type PickFn = Rc<dyn Fn(usize, &mut App)>;
+
 /// Which page the popover is showing.
 #[derive(Clone, Copy, PartialEq)]
 enum Page {
@@ -118,7 +121,7 @@ impl Panel {
                 };
                 // Media keys change the sink behind our back; the slider only
                 // shows what pactl reports, so re-read while the panel is open.
-                if visible && tick % 4 == 0 {
+                if visible && tick.is_multiple_of(4) {
                     let vol = cx
                         .background_executor()
                         .spawn(async { model::read_volume_pct() })
@@ -250,7 +253,7 @@ impl Panel {
                     let pos = pos
                         .filter(|(x, y)| *x > 40 || *y > 40)
                         .or_else(pointer_pos)
-                        .or_else(|| self.last_pos);
+                        .or(self.last_pos);
                     self.show_at(pos, window, cx);
                 }
             }
@@ -321,7 +324,7 @@ impl Panel {
     }
 
     fn show_at(&mut self, pos: Option<(i32, i32)>, window: &mut Window, cx: &mut Context<Self>) {
-        let pos = pos.or_else(|| self.last_pos).or_else(|| {
+        let pos = pos.or(self.last_pos).or_else(|| {
             let (sw, _) = screen_size();
             Some((sw - 240, 30))
         });
@@ -412,7 +415,7 @@ impl Panel {
         // (matches the GTK tray, which sends "" when only the backend changes).
         let me = cx.entity();
         let me_backend = me.clone();
-        let backend_pick: Rc<dyn Fn(usize, &mut App)> = Rc::new(move |i, cx| {
+        let backend_pick: PickFn = Rc::new(move |i, cx| {
             let (target, label) = if i == 0 {
                 ("pulse", "PulseAudio")
             } else {
@@ -805,7 +808,7 @@ fn segmented(
     options: &[&str],
     selected: usize,
     disabled: bool,
-    on_pick: Rc<dyn Fn(usize, &mut App)>,
+    on_pick: PickFn,
 ) -> Div {
     let mut row = div()
         .w_full()
@@ -959,12 +962,12 @@ impl Render for Panel {
 
         // Noise control: summary + two segmented rows (click to change).
         let mode_tx = self.svc_tx.clone();
-        let mode_pick: Rc<dyn Fn(usize, &mut App)> = Rc::new(move |i, _| {
+        let mode_pick: PickFn = Rc::new(move |i, _| {
             let _ = mode_tx.send(SvcCmd::SetNoiseMode(i as u32));
         });
         let level_tx = self.svc_tx.clone();
         let cur_mode = s.noise_mode;
-        let level_pick: Rc<dyn Fn(usize, &mut App)> = Rc::new(move |i, _| {
+        let level_pick: PickFn = Rc::new(move |i, _| {
             let _ = level_tx.send(SvcCmd::SetNoiseLevel(cur_mode, i as u32));
         });
         let noise = white_card()
