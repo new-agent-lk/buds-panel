@@ -3,7 +3,9 @@
 **A Linux control panel for Bluetooth earbuds — battery, ANC and codec switching.**
 
 <p align="left">
-  <img src="docs/assets/panel.png" width="300" alt="Buds Panel GTK popover showing battery, volume and ANC controls">
+  <img src="docs/assets/panel.png" width="240" alt="Buds Panel popover in the light theme: Xiaomi Buds 5 render, battery, volume and ANC controls">
+  <img src="docs/assets/panel-dark.png" width="240" alt="Buds Panel popover in the dark theme">
+  <img src="docs/assets/panel-settings.png" width="240" alt="Buds Panel settings page: audio backend, microphone lock and the codec list">
 </p>
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)

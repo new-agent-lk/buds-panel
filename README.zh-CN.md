@@ -3,7 +3,9 @@
 **一个 Linux 蓝牙耳机控制面板 —— 电量、降噪与编码切换。**
 
 <p align="left">
-  <img src="docs/assets/panel.png" width="300" alt="Buds Panel GTK 弹窗：电量、音量与降噪控制">
+  <img src="docs/assets/panel.png" width="240" alt="Buds Panel 浅色主题弹窗：小米 Buds 5 设备图、电量、音量与降噪控制">
+  <img src="docs/assets/panel-dark.png" width="240" alt="Buds Panel 深色主题弹窗">
+  <img src="docs/assets/panel-settings.png" width="240" alt="Buds Panel 设置页：音频后端、麦克风锁定与编码列表">
 </p>
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)

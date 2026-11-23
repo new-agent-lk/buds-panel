@@ -15,15 +15,9 @@ use gpui_kit::component::slider::{Slider, SliderEvent, SliderState};
 use crate::dbus::{Event, SniCmd, SvcCmd};
 use crate::model::{self, State, LEVELS, MODES};
 
-// AirPods palette (see crates/xiaomi-buds5-tray/src/main.rs CSS).
-const BG: u32 = 0xf5f5f7;
-const CARD: u32 = 0xffffff;
-const INK: u32 = 0x1d1d1f;
-const SUB: u32 = 0x6e6e73;
-const MUTED: u32 = 0x8e8e93;
-const ACCENT: u32 = 0x007aff;
-const SEG_TRACK: u32 = 0x76768020; // rgba(118,118,128,0.12)
-const HAIRLINE: u32 = 0x0000000e; // rgba(0,0,0,0.055)
+pub mod tokens;
+
+use tokens::{t, with_alpha};
 
 /// Chip click handler: index of the picked option, plus the app context.
 type PickFn = Rc<dyn Fn(usize, &mut App)>;
@@ -229,7 +223,10 @@ impl Panel {
                     self.last_error_seen = s.last_error.clone();
                     if !s.last_error.is_empty() {
                         self.pending = None;
-                        self.notice = Some((format!("切换失败：{}", s.last_error), true));
+                        self.notice = Some(match friendly_error(&s.last_error) {
+                            Some(m) => (m.to_string(), true),
+                            None => (format!("切换失败：{}", s.last_error), true),
+                        });
                     }
                 }
                 self.resolve_pending(&s);
@@ -378,7 +375,7 @@ impl Panel {
         div().w_full().px(px(4.)).child(text(
             msg.clone(),
             10.,
-            if *err { 0xd70015 } else { SUB },
+            if *err { t().danger } else { t().sub },
             false,
         ))
     }
@@ -396,20 +393,20 @@ impl Panel {
             .items_center()
             .justify_center()
             .rounded(px(8.))
-            .bg(rgba(SEG_TRACK))
+            .bg(rgba(t().track))
             .cursor_pointer()
             .on_click(cx.listener(|this, _, _, cx| {
                 this.page = Page::Main;
                 cx.notify();
             }))
-            .child(text("‹ 返回", 12., INK, false));
+            .child(text("‹ 返回", 12., t().ink, false));
         let head = div()
             .w_full()
             .flex()
             .items_center()
             .gap(px(4.))
             .child(back)
-            .child(text("声音设置", 16., INK, true));
+            .child(text("声音设置", 15., t().ink, true));
 
         // Backend switch: empty codec means "keep current codec" in the service
         // (matches the GTK tray, which sends "" when only the backend changes).
@@ -428,7 +425,7 @@ impl Panel {
             .flex_col()
             .gap(px(4.))
             .p(px(12.))
-            .child(text("音频后端", 12., INK, true))
+            .child(text("音频后端", 11., t().ink, true))
             .child(segmented(
                 "backend",
                 &["兼容", "高质量"],
@@ -437,35 +434,49 @@ impl Panel {
                 backend_pick,
             ));
 
-        // Codec grid, two per row; selecting keeps the current backend.
-        let mut grid = div().flex().flex_col().gap(px(4.));
+        // Codec chips, two per row. The labels carry a trailing note
+        // ("（接近无损）", "（需安装可选栈）") that made every chip truncate, so
+        // only the codec name is shown.
+        let mut grid = div().w_full().flex().flex_col().gap(px(4.));
         for chunk in s.codecs.chunks(2) {
-            let mut row = div().flex().gap(px(4.));
+            let mut row = div().w_full().flex().gap(px(4.));
             for (key, label) in chunk {
                 let on = *key == s.codec;
                 let me = me.clone();
-                let k = key.clone();
-                let l = label.clone();
+                let (k, l) = (key.clone(), label.clone());
+                let display = label.split('\u{ff08}').next().unwrap_or(label).to_string();
                 row = row.child(
                     div()
+                        .id(format!("codec-{key}"))
                         .flex_1()
+                        .min_w(px(0.))
+                        .overflow_hidden()
                         .h(px(34.))
                         .flex()
                         .items_center()
                         .justify_center()
                         .rounded(px(9.))
                         .bg(if on {
-                            rgba(0x007aff22)
+                            rgba(with_alpha(t().accent, 0x22))
                         } else {
-                            rgba(SEG_TRACK)
+                            rgba(t().track)
                         })
-                        .id(format!("codec-{key}"))
+                        .when(!on, |d| {
+                            d.hover(|s| s.bg(rgba(with_alpha(t().accent, 0x14))))
+                        })
                         .cursor_pointer()
                         .on_click(move |_, _, cx| {
                             let (me, k, l) = (me.clone(), k.clone(), l.clone());
                             me.update(cx, |this, cx| this.begin_switch(true, &k, &l, cx));
                         })
-                        .child(text(label.clone(), 11., if on { ACCENT } else { INK }, on)),
+                        .child(
+                            div().min_w(px(0.)).truncate().px(px(8.)).child(text(
+                                display.clone(),
+                                11.,
+                                if on { t().accent } else { t().ink },
+                                on,
+                            )),
+                        ),
                 );
             }
             if chunk.len() == 1 {
@@ -484,8 +495,8 @@ impl Panel {
                     .flex()
                     .items_center()
                     .justify_between()
-                    .child(text("蓝牙协议", 12., INK, true))
-                    .child(text(codec_label(s), 11., MUTED, false)),
+                    .child(text("蓝牙协议", 11., t().ink, true))
+                    .child(text(codec_label(s), 11., t().muted, false)),
             )
             .child(grid);
 
@@ -501,9 +512,12 @@ impl Panel {
             .justify_center()
             .rounded(px(7.))
             .bg(if on {
-                rgba(0x007aff22)
+                rgba(with_alpha(t().accent, 0x22))
             } else {
-                rgba(SEG_TRACK)
+                rgba(t().track)
+            })
+            .when(!on, |d| {
+                d.hover(|s| s.bg(rgba(with_alpha(t().accent, 0x14))))
             })
             .cursor_pointer()
             .on_click(cx.listener(|this, _, _, cx| {
@@ -534,7 +548,7 @@ impl Panel {
             .child(text(
                 if on { "已锁定" } else { "未锁定" },
                 11.,
-                if on { ACCENT } else { INK },
+                if on { t().accent } else { t().ink },
                 on,
             ));
         let mic_card = white_card()
@@ -548,22 +562,33 @@ impl Panel {
                     .flex()
                     .items_center()
                     .justify_between()
-                    .child(text("锁定麦克风", 11., INK, true))
+                    .child(text("锁定麦克风", 11., t().ink, true))
                     .child(lock_btn),
             )
-            .child(text("连接耳机时不切换默认输入设备", 9., MUTED, false));
+            .child(text("连接耳机时不切换默认输入设备", 11., t().muted, false));
 
         div()
             .size_full()
             .flex()
             .flex_col()
-            .gap(px(4.))
+            .gap(px(8.))
             .p(px(12.))
             .child(head)
             .child(self.notice_line())
             .child(backend_card)
             .child(mic_card)
             .child(codec_card)
+            // Spacer + version: three cards leave ~150px of card below them,
+            // which read as a page that failed to finish loading.
+            .child(div().flex_1())
+            .child(
+                div().w_full().flex().justify_center().child(text(
+                    format!("v{}", env!("CARGO_PKG_VERSION")),
+                    10.,
+                    t().muted,
+                    false,
+                )),
+            )
     }
 }
 
@@ -704,21 +729,39 @@ fn reposition(window: &mut Window, icon_x: i32, icon_y: i32) -> Option<(i32, i32
 
 // ---- small text builders ----
 
-// Hero art: the same bootstrap "earbuds" glyph used for the tray icon,
-// rendered to PNG (GPUI's Svg renderer drew the raw SVG blank) and scaled up.
+/// Raw transport text ("recv: Connection reset by peer (os error 104)") tells
+/// the user nothing; the common cases get the one sentence they can act on.
+// Xiaomi's own render of the n75g, taken from the MiBuds catalog; a vendor
+// asset, so it is not covered by this repository's Apache-2.0 licence.
 fn hero_image() -> impl IntoElement {
+    let png = if tokens::is_dark() {
+        include_bytes!("../../assets/hero-buds5-dark.png").to_vec()
+    } else {
+        include_bytes!("../../assets/hero-buds5-light.png").to_vec()
+    };
     img(Arc::new(gpui_kit::Image::from_bytes(
         gpui_kit::ImageFormat::Png,
-        include_bytes!("../../assets/hero-earbuds.png").to_vec(),
+        png,
     )))
-    .w(px(54.))
-    .h(px(54.))
+    .h(px(88.))
+}
+
+fn friendly_error(raw: &str) -> Option<&'static str> {
+    let low = raw.to_lowercase();
+    [
+        ("reset by peer", "耳机未连接"),
+        ("timed out", "耳机未连接"),
+        ("not connected", "耳机未连接"),
+    ]
+    .iter()
+    .find(|(needle, _)| low.contains(needle))
+    .map(|(_, msg)| *msg)
 }
 
 fn text(content: impl Into<SharedString>, size: f32, color: u32, bold: bool) -> Div {
     div()
         .text_size(px(size))
-        .text_color(rgb(color))
+        .text_color(rgba(color))
         .font_weight(if bold {
             FontWeight::BOLD
         } else {
@@ -728,13 +771,19 @@ fn text(content: impl Into<SharedString>, size: f32, color: u32, bold: bool) -> 
 }
 
 fn white_card() -> Div {
-    div()
+    let card = div()
         .w_full()
-        .bg(rgb(CARD))
+        .bg(rgba(t().card))
         .rounded(px(12.))
         .border_1()
-        .border_color(rgba(HAIRLINE))
-        .shadow_sm()
+        .border_color(rgba(t().hairline));
+    // Dark depth comes from the stacked surface colours; a drop shadow on a
+    // near-black sheet only smears into the background.
+    if tokens::is_dark() {
+        card
+    } else {
+        card.shadow_sm()
+    }
 }
 
 fn battery_pct(v: Option<(i32, bool)>) -> (String, bool) {
@@ -785,11 +834,11 @@ fn codec_label(s: &State) -> String {
 
 fn battery_cell(caption: &str, v: Option<(i32, bool)>) -> Div {
     let (value, charging) = battery_pct(v);
-    let value_color = if value == "未检测" { MUTED } else { INK };
+    let value_color = if value == "未检测" { t().muted } else { t().ink };
     let mut value_row = div().flex().items_center().gap(px(2.));
     value_row = value_row.child(text(value, 16., value_color, true));
     if charging {
-        value_row = value_row.child(text("⚡", 12., ACCENT, true));
+        value_row = value_row.child(text("⚡", 12., t().accent, true));
     }
     div()
         .flex_1()
@@ -798,7 +847,7 @@ fn battery_cell(caption: &str, v: Option<(i32, bool)>) -> Div {
         .items_center()
         .gap(px(2.))
         .child(value_row)
-        .child(text(caption, 9., MUTED, false))
+        .child(text(caption, 9., t().muted, false))
 }
 
 /// One segmented control row. `selected` indexes the highlighted option;
@@ -816,16 +865,16 @@ fn segmented(
         .gap(px(3.))
         .p(px(3.))
         .rounded(px(9.))
-        .bg(rgba(SEG_TRACK));
+        .bg(rgba(t().track));
     for (i, opt) in options.iter().enumerate() {
         let on = i == selected;
         let pick = on_pick.clone();
         let ink = if disabled {
-            MUTED
+            t().muted
         } else if on {
-            ACCENT
+            t().accent
         } else {
-            INK
+            t().ink
         };
         row = row.child(
             div()
@@ -835,7 +884,12 @@ fn segmented(
                 .items_center()
                 .justify_center()
                 .rounded(px(8.))
-                .when(on, |d| d.bg(rgb(CARD)).shadow_sm())
+                // A disabled row keeps no raised chip: the selection is stale
+                // state the device will reject anyway.
+                .when(on && !disabled, |d| d.bg(rgba(t().card)).shadow_sm())
+                .when(!on && !disabled, |d| {
+                    d.hover(|s| s.bg(rgba(with_alpha(t().ink, 0x08))))
+                })
                 .child(text(*opt, 11., ink, on && !disabled))
                 .id(format!("{prefix}-{i}"))
                 .when(!disabled, |d| {
@@ -848,6 +902,12 @@ fn segmented(
 
 impl Render for Panel {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // Follow the system appearance. There is no appearance-change hook in
+        // gpui-kit, so this lands on the next repaint the poll loop causes.
+        tokens::set_dark(matches!(
+            cx.window_appearance(),
+            WindowAppearance::Dark | WindowAppearance::VibrantDark
+        ));
         let s = &self.state;
         let name = if s.name.is_empty() {
             "Xiaomi Buds 5".to_string()
@@ -859,20 +919,19 @@ impl Render for Panel {
         let mode_summary = MODES.get(s.noise_mode as usize).copied().unwrap_or("—");
         let svc_tx = self.svc_tx.clone();
 
-        // Header: title + status on the left, a small refresh control on the right.
+        // Header: the two round buttons only. Name and link state live in the
+        // hero, so nothing is printed twice.
+        let needs_connect = self.offline || !s.connected;
+        let dot = if self.offline || !s.connected {
+            t().warning
+        } else {
+            t().success
+        };
         let header = div()
             .w_full()
             .flex()
             .items_center()
-            .justify_between()
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap(px(1.))
-                    .child(text(name.clone(), 15., INK, true))
-                    .child(text(status.clone(), 10., MUTED, false)),
-            )
+            .justify_end()
             .child(
                 div()
                     .flex()
@@ -887,12 +946,19 @@ impl Render for Panel {
                             .items_center()
                             .justify_center()
                             .rounded_full()
-                            .bg(rgba(0x0000000f))
+                            .bg(rgba(with_alpha(t().ink, 0x0f)))
+                            .hover(|s| s.bg(rgba(with_alpha(t().ink, 0x1c))))
                             .cursor_pointer()
                             .on_click(move |_, _, _| {
-                                let _ = svc_tx.send(SvcCmd::Refresh);
+                                // With the link down the same button is the
+                                // retry: it reconnects instead of re-reading.
+                                let _ = svc_tx.send(if needs_connect {
+                                    SvcCmd::Connect
+                                } else {
+                                    SvcCmd::Refresh
+                                });
                             })
-                            .child(text("↻", 13., SUB, false)),
+                            .child(text("↻", 13., t().sub, false)),
                     )
                     .child(
                         div()
@@ -903,29 +969,35 @@ impl Render for Panel {
                             .items_center()
                             .justify_center()
                             .rounded_full()
-                            .bg(rgba(0x0000000f))
+                            .bg(rgba(with_alpha(t().ink, 0x0f)))
+                            .hover(|s| s.bg(rgba(with_alpha(t().ink, 0x1c))))
                             .cursor_pointer()
                             .on_click(cx.listener(|this, _, window, cx| {
                                 // A tray popover closes; it does not kill the app.
                                 this.hide(window, cx);
                             }))
-                            .child(text("✕", 12., SUB, false)),
+                            .child(text("✕", 12., t().sub, false)),
                     ),
             );
 
-        // Hero: earbuds image on top, device name + status centered below.
+        // Hero: the device render, then name and link state.
         let hero = white_card()
             .flex()
             .flex_col()
             .items_center()
             .gap(px(4.))
-            .pt(px(8.))
-            .pb(px(6.))
-            .px(px(18.))
+            .pt(px(10.))
+            .pb(px(10.))
             .child(hero_image())
-            .child(text(name.clone(), 16., INK, true))
-            .child(text(status, 11., SUB, false))
-            .child(text(protocol, 10., MUTED, false));
+            .child(text(name.clone(), 17., t().ink, true))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(5.))
+                    .child(div().w(px(6.)).h(px(6.)).rounded_full().bg(rgba(dot)))
+                    .child(text(status.clone(), 11., t().muted, false)),
+            );
 
         // Battery: three cells (left / right / case).
         let battery = white_card()
@@ -949,14 +1021,14 @@ impl Render for Panel {
                     .flex()
                     .items_center()
                     .justify_between()
-                    .child(text("音量", 11., INK, true))
-                    .child(text(format!("{}%", self.volume_pct), 11., SUB, false)),
+                    .child(text("音量", 11., t().ink, true))
+                    .child(text(format!("{}%", self.volume_pct), 11., t().sub, false)),
             )
             .child(
                 div().w_full().h(px(16.)).child(
                     Slider::new(&self.volume)
-                        .bg(rgb(ACCENT))
-                        .text_color(rgb(ACCENT)),
+                        .bg(rgba(t().accent))
+                        .text_color(rgba(t().accent)),
                 ),
             );
 
@@ -981,8 +1053,8 @@ impl Render for Panel {
                     .flex()
                     .items_center()
                     .justify_between()
-                    .child(text("降噪控制", 11., INK, true))
-                    .child(text(mode_summary, 10., MUTED, false)),
+                    .child(text("降噪控制", 11., t().ink, true))
+                    .child(text(mode_summary, 10., t().muted, false)),
             )
             .child(segmented(
                 "mode",
@@ -1001,48 +1073,56 @@ impl Render for Panel {
                 level_pick,
             ));
 
-        // Action row: open the in-popover settings page / reconnect the device.
-        let settings_btn = div()
-            .id("open-settings")
-            .flex_1()
-            .h(px(30.))
+        // Bottom status bar (04): protocol on the left, audio backend on the
+        // right, both read-only. The whole strip opens settings, so the action
+        // row below only carries what this does not duplicate. Offline, waiting
+        // for the audio link, or mid-switch turns the strip into the warning
+        // tint — the one place a problem shows up without stealing space.
+        let backend_label = if s.audio_backend == "adaptive" {
+            "高质量"
+        } else {
+            "兼容"
+        };
+        let abnormal = self.offline || !s.connected || self.pending.is_some();
+        let bar_fg = if abnormal { t().warning } else { t().muted };
+        let status_bar = div()
+            .id("status-bar")
+            .w_full()
+            .h(px(22.))
+            .px(px(4.))
             .flex()
             .items_center()
-            .justify_center()
-            .rounded(px(8.))
-            .bg(rgba(SEG_TRACK))
+            .justify_between()
+            .gap(px(8.))
+            .rounded(px(6.))
+            .when(abnormal, |d| d.bg(rgba(with_alpha(t().warning, 0x1f))))
+            .hover(|s| s.bg(rgba(with_alpha(t().ink, 0x0a))))
             .cursor_pointer()
             .on_click(cx.listener(|this, _, _, cx| {
                 this.page = Page::Settings;
                 cx.notify();
             }))
-            .child(text("声音设置", 11., INK, false));
-        let reconnect_tx = self.svc_tx.clone();
-        let reconnect_btn = div()
-            .id("reconnect")
-            .flex_1()
-            .h(px(30.))
-            .flex()
-            .items_center()
-            .justify_center()
-            .rounded(px(8.))
-            .bg(rgba(SEG_TRACK))
-            .cursor_pointer()
-            .on_click(move |_, _, _| {
-                let _ = reconnect_tx.send(SvcCmd::Connect);
-            })
-            .child(text("重新连接", 11., INK, false));
-        let actions = div()
-            .w_full()
-            .flex()
-            .gap(px(4.))
-            .child(settings_btn)
-            .child(reconnect_btn);
+            .child(
+                div()
+                    .flex_1()
+                    .min_w(px(0.))
+                    .truncate()
+                    .child(text(protocol, 11., bar_fg, false)),
+            )
+            // The chevron is the only hint that the whole strip navigates.
+            .child(text(
+                format!("{backend_label} \u{203a}"),
+                11.,
+                if abnormal { t().warning } else { t().sub },
+                false,
+            ));
 
         let main_view = div()
+            .size_full()
             .flex()
             .flex_col()
-            .gap(px(4.))
+            .justify_between()
+            .gap(px(6.))
             .p(px(12.))
             .child(header)
             .child(hero)
@@ -1050,7 +1130,7 @@ impl Render for Panel {
             .child(battery)
             .child(volume)
             .child(noise)
-            .child(actions);
+            .child(status_bar);
 
         let body = match self.page {
             Page::Main => main_view,
@@ -1061,7 +1141,7 @@ impl Render for Panel {
         // opaque light halo, which showed up as a white square around the card.
         let card = div()
             .size_full()
-            .bg(rgb(BG))
+            .bg(rgba(t().bg))
             .rounded(px(18.))
             .overflow_hidden()
             .child(body);

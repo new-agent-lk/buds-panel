@@ -4,6 +4,18 @@ Copyright 2026 The Buds Panel Authors
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
 ===============================================================================
+Vendor artwork
+===============================================================================
+
+crates/xiaomi-buds5-panel-gpui/assets/hero-buds5-light.png
+crates/xiaomi-buds5-panel-gpui/assets/hero-buds5-dark.png
+   Device renders of the Xiaomi Buds 5 (n75g), downloaded from Xiaomi's CDN
+   through the MiBuds catalog (https://github.com/CesurPolat/MiBudsClient).
+   These are Xiaomi product images, not the work of this project: they are NOT
+   covered by the Apache License 2.0 that applies to the rest of the tree, and
+   they must be dropped (or replaced) before any redistribution.
+
+===============================================================================
 Third-party components
 ===============================================================================
 
