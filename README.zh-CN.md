@@ -9,10 +9,10 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Platform: Linux](https://img.shields.io/badge/platform-Linux-lightgrey.svg)](#依赖)
 [![Language: Rust](https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
-[![UI: GTK3](https://img.shields.io/badge/UI-GTK3-4a90d9.svg)](#架构)
+[![UI: GPUI (migrating)](https://img.shields.io/badge/UI-GPUI%20(migrating)-4a90d9.svg)](#架构)
 [![Release](https://img.shields.io/github/v/release/new-agent-lk/buds-panel?color=blue)](https://github.com/new-agent-lk/buds-panel/releases)
 
-Buds Panel 是一个用 Rust + GTK3 写的 Linux 桌面小工具，直接通过蓝牙耳机的控制通道读写状态。
+Buds Panel 是一个用 Rust 写的 Linux 桌面小工具（当前为 GTK3 托盘，正在迁移到 GPUI），直接通过蓝牙耳机的控制通道读写状态。
 它能读取左右耳与充电盒电量、切换降噪模式、选择蓝牙音频编码，全部集中在一个挂在顶栏下的弹窗里，
 背后是一个常驻的 D-Bus 服务，也可以直接在脚本里调用。
 
@@ -48,22 +48,25 @@ Xiaomi、Redmi、Buds 是各自权利人的商标；本项目与小米无隶属�
 - **编码切换** —— SBC、SBC-XQ、AAC、aptX Classic，以及（在可选高质量音频栈可用时）aptX Adaptive 系列
   （Adaptive / Adaptive HQ / Adaptive LL）。
 - **音量** —— 控制耳机对应的 A2DP sink。
-- **两套前端** —— GTK3 状态托盘/弹窗（主界面）与可选的 GNOME 43 快捷设置扩展。
+- **前端** —— GPUI 面板（新默认，迁移中）、GTK3 状态托盘/弹窗（回退，`--ui=gtk`）与可选的 GNOME 43 快捷设置扩展。
 - **可脚本化** —— 提供 `xiaomi-buds5` 命令行工具和稳定的 D-Bus 接口。
 - **多点友好** —— 手机占用音频流时与它共存，而不是去抢链路。
 
 ## 依赖
 
-- Linux，带 **BlueZ** 与桌面会话（GTK3；已在 GNOME 43 / Wayland 上测试）。
+- Linux，带 **BlueZ** 与桌面会话。GPUI 面板需要 GPU（**Vulkan 1.x 或 OpenGL**，可用 lavapipe 软渲兜底）
+  与 **XWayland**（弹窗会强制 X11 后端以贴图标定位）。已在 GNOME 43 / Wayland 上测试。
 - **Rust 工具链**（`cargo`、`rustc`）—— 仅构建时需要。
-- **libgtk-3-dev** 与 **librsvg2-common**（耳机图标由 SVG 渲染）。
+- **libgtk-3-dev** 与 **librsvg2-common** —— 仅在构建 GTK 托盘回退时需要。
+- GPUI 构建依赖：**libxkbcommon-x11-dev**、`libxkbcommon-dev`、`libwayland-dev`、`libx11-xcb-dev`、`libvulkan-dev`。
 - **PipeWire 或 PulseAudio** 作为音频服务器。
 - *可选：* **libfdk-aac2** —— 只有想在高质量音频栈里使用 AAC 时才需要。
 
 在 Debian/Ubuntu 上安装构建/运行依赖：
 
 ```sh
-sudo apt install build-essential pkg-config libgtk-3-dev librsvg2-common libdbus-1-dev
+sudo apt install build-essential pkg-config libdbus-1-dev libgtk-3-dev librsvg2-common \
+  libxkbcommon-x11-dev libxkbcommon-dev libwayland-dev libx11-xcb-dev libvulkan-dev
 # 可选，高质量栈里用 AAC：
 sudo apt install libfdk-aac2        # 部分发行版为 libfdk-aac-dev
 ```
@@ -76,26 +79,28 @@ cd buds-panel
 ./install.sh
 ```
 
-`install.sh` 会构建 Rust 程序（`cargo build --release`）、安装 D-Bus 服务、GTK 托盘与命令行工具，
-然后把服务与托盘启用为开机自启的用户单元。程序会自动发现你的耳机
+`install.sh` 会构建 Rust 程序（`cargo build --release`）、安装 D-Bus 服务、GPUI 面板（默认）与命令行工具，
+并把它们启用为开机自启的用户单元。加 `--ui=gtk`（或 `XIAOMI_BUDS5_UI=gtk`）改用旧的 GTK 托盘 ——
+旧托盘始终保留，一条命令即可回滚（`./install.sh --ui=gtk`）。程序会自动发现你的耳机
 （可用 `XIAOMI_BUDS5_MAC=AA:BB:CC:DD:EE:FF` 覆盖），无需写死任何信息。
 
-GNOME 扩展**默认不安装**（托盘是主界面）。若要一并安装并启用，运行
+GNOME 扩展**默认不安装**（托盘为回退界面）。若要一并安装并启用，运行
 `./install.sh --with-gnome-extension`，然后**注销并重新登录一次** —— GNOME 只在登录时扫描扩展目录。
 
 卸载：`./uninstall.sh`。
 
 ## 使用
 
-### 托盘 / 弹窗（主界面）
+### GPUI 面板（默认）/ GTK 托盘（回退）
 
-托盘随登录自动启动（`xiaomi-buds5-tray.service`）。点击顶栏的耳机图标打开弹窗：
+面板随登录自动启动（`xiaomi-buds5-panel-gpui.service`）；用 `--ui=gtk` 时改为 GTK 托盘
+（`xiaomi-buds5-tray.service`）。点击顶栏的耳机图标打开弹窗：
 
 - 左 / 右 / 盒电量，
 - 耳机 A2DP sink 的音量滑杆，
 - **关闭 / 降噪 / 通透** 与强度选择，
 - 编码选择（在"声音设置"里），
-- **连接电脑** 按钮，把被手机接管的音频拉回电脑。
+- **重新连接** 按钮（GTK 托盘里叫 *连接电脑*），把被手机接管的音频拉回电脑。
 
 ### 命令行
 
@@ -115,7 +120,7 @@ xiaomi-buds5 selftest            # 自检：服务可达且耳机已连接
 
 ## 架构
 
-项目由四个协同部分组成；托盘不直接碰蓝牙或音频 —— 一切都通过 D-Bus 交给服务处理。
+项目由五个协同部分组成；前端不直接碰蓝牙或音频 —— 一切都通过 D-Bus 交给服务处理。
 
 ```
   ┌─────────────┐   D-Bus (io.github.kang.XiaomiBuds5)   ┌──────────────────────────┐
@@ -136,7 +141,8 @@ xiaomi-buds5 selftest            # 自检：服务可达且耳机已连接
 | 组件 | crate / 目录 | 职责 |
 | --- | --- | --- |
 | 服务 | `crates/xiaomi-buds5-service` | 常驻 D-Bus 守护进程。持有 RFCOMM 控制通道、解析电量/降噪、切换音频后端与编码。 |
-| 托盘 | `crates/xiaomi-buds5-tray` | GTK3 状态图标 + 弹窗，外加手写的 StatusNotifierItem。主界面。 |
+| 托盘 | `crates/xiaomi-buds5-tray` | GTK3 状态图标 + 弹窗，外加手写的 StatusNotifierItem。GPUI 迁移期间的回退界面。 |
+| GPUI 面板 | `crates/xiaomi-buds5-panel-gpui` | GPUI（基于 Zed）弹窗前端，新默认界面；迁移完成后取代 GTK 托盘。 |
 | 命令行 | `crates/xiaomi-buds5-cli` | `xiaomi-buds5` —— 薄 D-Bus 客户端，用于状态、降噪、自检。 |
 | 扩展 | `extension/xiaomi-buds5-panel@kang` | 可选的 GNOME 43 快捷设置磁贴。 |
 | 音频栈（可选） | `audio-adaptive/` | 按需启动隔离的 PipeWire 1.7 + aptX Adaptive 栈的脚本。见下。 |

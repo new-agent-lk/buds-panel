@@ -9,10 +9,10 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Platform: Linux](https://img.shields.io/badge/platform-Linux-lightgrey.svg)](#requirements)
 [![Language: Rust](https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
-[![UI: GTK3](https://img.shields.io/badge/UI-GTK3-4a90d9.svg)](#architecture)
+[![UI: GPUI (migrating)](https://img.shields.io/badge/UI-GPUI%20(migrating)-4a90d9.svg)](#architecture)
 [![Release](https://img.shields.io/github/v/release/new-agent-lk/buds-panel?color=blue)](https://github.com/new-agent-lk/buds-panel/releases)
 
-Buds Panel is a small Rust + GTK3 desktop app for Linux that talks directly to Bluetooth
+Buds Panel is a small Rust desktop app for Linux (GTK3 tray today, migrating to GPUI) that talks directly to Bluetooth
 earbuds over their control channel. It reads per-earbud and charging-case battery, switches
 noise-cancelling modes, and selects the Bluetooth audio codec — all from a popover that hangs
 off your top bar, backed by a resident D-Bus service you can also script.
@@ -54,17 +54,21 @@ with or endorsed by Xiaomi.
 - **Codec switching** — SBC, SBC-XQ, AAC, aptX Classic and the aptX Adaptive family
   (Adaptive / Adaptive HQ / Adaptive LL) when the optional high-quality audio stack is present.
 - **Volume** — controls the A2DP sink that belongs to the earbuds.
-- **Two front-ends** — a GTK3 status tray/popover (primary) and an optional GNOME 43
-  Quick Settings extension.
+- **Front-ends** — a GPUI panel (new default, migrating in), a GTK3 status tray/popover
+  (fallback, `--ui=gtk`), and an optional GNOME 43 Quick Settings extension.
 - **Scriptable** — a `xiaomi-buds5` CLI and a stable D-Bus API for automation.
 - **Multi-point friendly** — coexists with a phone that owns the audio stream instead of
   fighting it for the link.
 
 ## Requirements
 
-- Linux with **BlueZ** and a desktop session (GTK3; tested on GNOME 43 / Wayland).
+- Linux with **BlueZ** and a desktop session. The GPUI panel needs a GPU (**Vulkan 1.x or
+  OpenGL**, with lavapipe as a software fallback) and **XWayland** (the popover is anchored by
+  forcing the X11 backend). Tested on GNOME 43 / Wayland.
 - **Rust toolchain** (`cargo`, `rustc`) — build-time only.
-- **libgtk-3-dev** and **librsvg2-common** (the app renders its earbud icon from SVG).
+- **libgtk-3-dev** and **librsvg2-common** — only while the GTK tray fallback is built.
+- GPUI build deps: **libxkbcommon-x11-dev**, `libxkbcommon-dev`, `libwayland-dev`,
+  `libx11-xcb-dev`, `libvulkan-dev`.
 - **PipeWire or PulseAudio** as the audio server.
 - *Optional:* **libfdk-aac2** — needed only if you want AAC while the high-quality audio stack
   is active.
@@ -72,7 +76,8 @@ with or endorsed by Xiaomi.
 Install the build/runtime prerequisites on Debian/Ubuntu:
 
 ```sh
-sudo apt install build-essential pkg-config libgtk-3-dev librsvg2-common libdbus-1-dev
+sudo apt install build-essential pkg-config libdbus-1-dev libgtk-3-dev librsvg2-common \
+  libxkbcommon-x11-dev libxkbcommon-dev libwayland-dev libx11-xcb-dev libvulkan-dev
 # optional, for AAC in the high-quality stack:
 sudo apt install libfdk-aac2        # or libfdk-aac-dev on some releases
 ```
@@ -86,10 +91,12 @@ cd buds-panel
 ```
 
 `install.sh` builds the Rust binaries (`cargo build --release`), installs the D-Bus service, the
-GTK tray and the CLI, then enables the service and tray as user units. The app auto-discovers your
-earbuds (override with `XIAOMI_BUDS5_MAC=AA:BB:CC:DD:EE:FF`); there is nothing to hard-code.
+GPUI panel (default) and the CLI, then enables them as user units. Pass `--ui=gtk` (or
+`XIAOMI_BUDS5_UI=gtk`) to use the old GTK tray instead — it stays installed as a one-command
+rollback (`./install.sh --ui=gtk`). The app auto-discovers your earbuds (override with
+`XIAOMI_BUDS5_MAC=AA:BB:CC:DD:EE:FF`); there is nothing to hard-code.
 
-The GNOME extension is **not** installed by default (the tray is the primary UI). To install and
+The GNOME extension is **not** installed by default (the tray is a fallback UI). To install and
 enable it as well, run `./install.sh --with-gnome-extension` and then **log out and back in once** —
 GNOME only scans extension directories at login.
 
@@ -97,16 +104,17 @@ Uninstall with `./uninstall.sh`.
 
 ## Usage
 
-### Tray / popover (primary UI)
+### GPUI panel (default) / GTK tray (fallback)
 
-The tray starts automatically at login (`xiaomi-buds5-tray.service`). Click the headphone icon in
-the top bar to open the popover:
+The panel starts automatically at login (`xiaomi-buds5-panel-gpui.service`); with `--ui=gtk`, the
+GTK tray runs instead (`xiaomi-buds5-tray.service`). Click the headphone icon in the top bar to
+open the popover:
 
 - battery for left / right / case,
 - volume slider for the earbuds' A2DP sink,
 - **Off / Noise cancelling / Transparency** and the strength selector,
 - codec picker (under *audio settings*),
-- a **Connect to computer** button to pull audio back from a phone that took it over.
+- a **Reconnect** button (GTK tray: *Connect to computer*) to pull audio back from a phone that took it over.
 
 ### Command line
 
@@ -128,7 +136,7 @@ The extension is community-maintained and not verified against newer GNOME relea
 
 ## Architecture
 
-The project is four cooperating pieces; the tray does not touch Bluetooth or audio directly —
+The project is five cooperating pieces; the UI does not touch Bluetooth or audio directly —
 everything goes through the service over D-Bus.
 
 ```
@@ -150,7 +158,8 @@ everything goes through the service over D-Bus.
 | Component | Crate / dir | Role |
 | --- | --- | --- |
 | Service | `crates/xiaomi-buds5-service` | Resident D-Bus daemon. Owns the RFCOMM control channel, decodes battery/ANC, switches the audio backend and codec. |
-| Tray | `crates/xiaomi-buds5-tray` | GTK3 status icon + popover, plus a hand-written StatusNotifierItem. The primary UI. |
+| Tray | `crates/xiaomi-buds5-tray` | GTK3 status icon + popover, plus a hand-written StatusNotifierItem. Fallback UI during the GPUI migration. |
+| GPUI panel | `crates/xiaomi-buds5-panel-gpui` | GPUI (Zed-based) popover front-end, the new default UI; replaces the GTK tray once migration completes. |
 | CLI | `crates/xiaomi-buds5-cli` | `xiaomi-buds5` — a thin D-Bus client for status, ANC and self-test. |
 | Extension | `extension/xiaomi-buds5-panel@kang` | Optional GNOME 43 Quick Settings tile. |
 | Audio stack (optional) | `audio-adaptive/` | Glue scripts to run an isolated PipeWire 1.7 + aptX Adaptive stack on demand. See below. |

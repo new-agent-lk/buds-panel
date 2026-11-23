@@ -319,6 +319,20 @@ fn buds_icon() -> gtk::Image {
     img
 }
 
+// ---- Tray icon pixmaps: custom AirPods-style earbuds, served via IconPixmap ----
+// Raw ARGB (network byte order) so the image is the same on any host/theme and
+// needs no runtime SVG/PNG decoding. Shared with the GPUI panel crate.
+static ICON_24: &[u8] = include_bytes!("../../shared/tray-24.argb");
+static ICON_32: &[u8] = include_bytes!("../../shared/tray-32.argb");
+static ICON_48: &[u8] = include_bytes!("../../shared/tray-48.argb");
+
+fn icon_pixmaps() -> Vec<(i32, i32, Vec<u8>)> {
+    [(24i32, ICON_24), (32, ICON_32), (48, ICON_48)]
+        .iter()
+        .map(|(s, d)| (*s, *s, d.to_vec()))
+        .collect()
+}
+
 // ---- StatusNotifierItem server -------------------------------------------------
 
 struct StatusNotifier {
@@ -338,8 +352,8 @@ fn sni_prop(name: &str, status: &Arc<Mutex<String>>) -> glib::Variant {
             .unwrap()
             .to_variant(),
         "ItemIsMenu" => false.to_variant(),
-        "IconName" => "audio-headphones".to_variant(),
-        "IconPixmap" => Vec::<(i32, i32, Vec<u8>)>::new().to_variant(),
+        "IconName" => "".to_variant(),
+        "IconPixmap" => icon_pixmaps().to_variant(),
         "OverlayIconName" => "".to_variant(),
         "OverlayIconPixmap" => Vec::<(i32, i32, Vec<u8>)>::new().to_variant(),
         "AttentionIconName" => "".to_variant(),

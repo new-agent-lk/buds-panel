@@ -1,0 +1,16 @@
+[Unit]
+Description=Xiaomi Buds 5 GPUI panel
+After=graphical-session.target xiaomi-buds5-panel.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+# GPUI panel anchors to the tray icon via the X11 backend, so force XWayland:
+# DISPLAY lets main() clear WAYLAND_DISPLAY and use the X11 window.
+Environment=DISPLAY=:0
+ExecStart=%h/.local/bin/xiaomi-buds5-panel
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target

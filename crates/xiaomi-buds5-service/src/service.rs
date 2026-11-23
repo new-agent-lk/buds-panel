@@ -816,6 +816,9 @@ impl Worker {
                     }
                 }
             }
+            // No ANC mode, no level: the device rejects mode 0, and surfacing
+            // that as "切换失败" would only report a meaningless click.
+            Cmd::SetNoiseLevel(0, _) => {}
             Cmd::SetNoiseLevel(mode, level) => {
                 let result = match self.session.as_mut() {
                     Some(s) => s.set_noise_level(mode as u8, level as u8),

@@ -1,0 +1,22 @@
+[package]
+name = "xiaomi-buds5-panel-gpui"
+version.workspace = true
+edition = "2021"
+description = "GPUI front-end for the Xiaomi Buds 5 panel (GTK3 -> GPUI migration, in progress)"
+
+[[bin]]
+name = "xiaomi-buds5-panel"
+path = "src/main.rs"
+
+[dependencies]
+gpui-kit = "0.10.0"
+# gio/glib run the D-Bus bridge on its own thread; flume carries messages
+# across the glib <-> GPUI boundary (all versions already in the lockfile).
+glib = "0.18"
+gio = "0.18"
+flume = "0.12"
+# Drop a frameless window right under the tray icon: we grab the raw X11 XID
+# (raw-window-handle) and move it with an X ConfigureWindow (x11rb). Both are
+# already in the lockfile via gpui's own Linux backend.
+raw-window-handle = "0.6"
+x11rb = "0.13"

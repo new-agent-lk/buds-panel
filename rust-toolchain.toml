@@ -1,0 +1,5 @@
+[toolchain]
+# Pin the toolchain for the whole workspace. GPUI Kit 0.10 needs stable >= 1.92;
+# 1.98.1 is the version the GPUI PoC was built/verified with (see docs/gpui-migration.md §6 P0.5).
+channel = "1.98.1"
+components = ["rustfmt", "clippy"]

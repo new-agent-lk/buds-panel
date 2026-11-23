@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/xiaomi-buds5-service", "crates/xiaomi-buds5-tray", "crates/xiaomi-buds5-cli"]
+members = ["crates/xiaomi-buds5-service", "crates/xiaomi-buds5-tray", "crates/xiaomi-buds5-cli", "crates/xiaomi-buds5-panel-gpui"]
 # The vendored aptX encoder, runtime and experimental trees are independent
 # Cargo projects / scripts; keep them out of this workspace.
 exclude = ["aptx-adaptive-linux", "runtime", "experimental-aptx-adaptive"]
@@ -12,3 +12,11 @@ version = "0.1.0"
 opt-level = 2
 lto = "thin"
 strip = true
+
+# GPUI's render stack is unusably slow fully unoptimized; give dev builds some
+# optimization so `cargo run` (debug) still drags smoothly.
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 2
