@@ -383,10 +383,10 @@ impl StatusNotifier {
         let node = gio::DBusNodeInfo::for_xml(SNI_XML)?;
         let iface = node.interfaces()[0].clone();
         let status = Arc::new(Mutex::new("Active".to_string()));
-        for path in [
-            "/StatusNotifierItem",
-            "/org/ayatana/NotificationItem/xiaomi_buds5_panel",
-        ] {
+        // One object path only: exposing the ayatana path alongside it made
+        // GNOME's appindicator extension list the same item twice, which shows
+        // up as two tray icons.
+        for path in ["/StatusNotifierItem"] {
             let q = queue.clone();
             let st_get = status.clone();
             conn.register_object(
